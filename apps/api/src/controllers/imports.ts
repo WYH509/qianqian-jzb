@@ -12,6 +12,8 @@ import {
   normalizeType,
   sha256,
 } from '../utils/excel-parser.js';
+import { executeAiParseTask, type AiParseTaskInput } from '../services/deepseek-service.js';
+import { getTimeWindow } from '../utils/time-window.js';
 
 // --- Row types ---
 interface PreviewRow {
@@ -403,16 +405,56 @@ export function rollbackImport(
   }
 }
 
-// --- POST /api/v1/import/ai-parse（TP-08 实现，先 stub） ---
-export function aiParse(
-  _req: Request,
+// --- POST /api/v1/import/ai-parse（PRD §14.6 + §15.4 完整实现） ---
+export async function aiParse(
+  req: Request,
   res: Response,
-  _next: NextFunction
-): void {
-  res.status(501).json({
-    error: {
-      code: 'ERR0901',
-      message: 'AI 解析功能由 TP-08 实现（DeepSeek 集成）',
-    },
-  });
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.file) {
+      throw new AppError(400, 'ERR0001', '未上传文件');
+    }
+    const buffer = req.file.buffer;
+    const fileType: 'pdf' | 'image' =
+      req.file.mimetype === 'application/pdf' ? 'pdf' : 'image';
+
+    const input: AiParseTaskInput = {
+      taskType: 'bank_statement',
+      fileBase64: buffer.toString('base64'),
+      fileType,
+    };
+
+    const outcome = await executeAiParseTask(input);
+    const timeWindow = getTimeWindow();
+
+    if (outcome.ok) {
+      // 200 + completed
+      res.json({
+        status: 'completed',
+        model: outcome.model,
+        usage: outcome.usage,
+        transactions: outcome.data,
+      });
+    } else if (outcome.kind === 'queued') {
+      // 202 + queued
+      res.status(202).json({
+        status: 'queued',
+        queueId: outcome.queueId,
+        estimatedProcessAt: new Date(
+          timeWindow.nextOffPeakAt
+        ).toISOString(),
+        message: outcome.message,
+      });
+    } else {
+      // 转人工（4 类失败转人工）
+      res.status(503).json({
+        status: 'failed',
+        kind: outcome.kind,
+        message: outcome.message,
+      });
+    }
+  } catch (err) {
+    next(err);
+  }
 }

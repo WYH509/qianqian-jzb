@@ -14,6 +14,8 @@ import { transactionRoutes } from './routes/transactions.js';
 import { summaryRoutes } from './routes/summary.js';
 import { importRoutes } from './routes/imports.js';
 import { exportRoutes } from './routes/exports.js';
+import { deepseekRoutes } from './routes/deepseek.js';
+import { aiParseQueueRoutes } from './routes/ai-parse-queue.js';
 
 const app = express();
 
@@ -42,6 +44,8 @@ app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/summary', summaryRoutes);
 app.use('/api/v1/import', importRoutes);
 app.use('/api/v1/export', exportRoutes);
+app.use('/api/v1/deepseek', deepseekRoutes);
+app.use('/api/v1/ai-parse-queue', aiParseQueueRoutes);
 
 app.use('/api/v1', (req, res) => {
   res.status(404).json({ error: { code: 'ERR0004', message: 'Not Found' } });
