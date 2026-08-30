@@ -1,0 +1,30 @@
+{
+  "name": "qianqian-jzb",
+  "version": "0.1.0",
+  "private": true,
+  "description": "钱钱家账本 - 单人本地记账应用（PRD V2 实施版）",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev -w @qianqian-jzb/api\" \"npm run dev -w @qianqian-jzb/web\"",
+    "dev:api": "npm run dev -w @qianqian-jzb/api",
+    "dev:web": "npm run dev -w @qianqian-jzb/web",
+    "build": "npm run build --workspaces --if-present",
+    "migrate": "npm run migrate -w @qianqian-jzb/api",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "backup": "bash deploy/backup.sh",
+    "process-queue": "bash deploy/process-ai-queue.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
