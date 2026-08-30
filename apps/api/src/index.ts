@@ -12,6 +12,8 @@ import { authRoutes } from './routes/auth.js';
 import { accountRoutes } from './routes/accounts.js';
 import { transactionRoutes } from './routes/transactions.js';
 import { summaryRoutes } from './routes/summary.js';
+import { importRoutes } from './routes/imports.js';
+import { exportRoutes } from './routes/exports.js';
 
 const app = express();
 
@@ -38,6 +40,8 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/accounts', accountRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/summary', summaryRoutes);
+app.use('/api/v1/import', importRoutes);
+app.use('/api/v1/export', exportRoutes);
 
 app.use('/api/v1', (req, res) => {
   res.status(404).json({ error: { code: 'ERR0004', message: 'Not Found' } });
