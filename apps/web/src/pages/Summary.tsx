@@ -16,9 +16,32 @@ const GROUP_OPTIONS: Array<{ key: CashflowGroupBy; label: string }> = [
   { key: 'year', label: '年' },
 ];
 
+const controlCls =
+  'rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none';
+
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
+function lastMonthAgoISO(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
 export default function Summary() {
   const [tab, setTab] = useState<Tab>('accounts');
   const [groupBy, setGroupBy] = useState<CashflowGroupBy>('month');
+
+  // 默认日期范围：上个月今天 → 今天
+  const [startDate, setStartDate] = useState<string>(lastMonthAgoISO);
+  const [endDate, setEndDate] = useState<string>(todayISO);
+  const [reloadTick, setReloadTick] = useState(0);
 
   const [accountRows, setAccountRows] = useState<AccountSummaryRow[] | null>(null);
   const [cashflowRows, setCashflowRows] = useState<CashflowPoint[] | null>(null);
@@ -26,35 +49,77 @@ export default function Summary() {
 
   useEffect(() => {
     let cancelled = false;
-    getAccountSummary()
+    setAccountRows(null);
+    getAccountSummary({ startDate, endDate })
       .then((data) => {
-        if (!cancelled) setAccountRows(data);
+        if (!cancelled) {
+          setAccountRows(data);
+          setError(null);
+        }
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : '加载账户汇总失败');
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : '加载账户汇总失败');
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [startDate, endDate, reloadTick]);
 
   useEffect(() => {
     let cancelled = false;
-    getCashflow({ groupBy })
+    setCashflowRows(null);
+    getCashflow({ groupBy, startDate, endDate })
       .then((data) => {
-        if (!cancelled) setCashflowRows(data);
+        if (!cancelled) {
+          setCashflowRows(data);
+          setError(null);
+        }
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : '加载收支流失败');
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : '加载收支流失败');
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [groupBy]);
+  }, [groupBy, startDate, endDate, reloadTick]);
 
   return (
     <section>
-      <h1 className="mb-4 text-xl font-semibold text-gray-900">汇总</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">汇总</h1>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs text-gray-500">
+            开始日期
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={controlCls}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-gray-500">
+            结束日期
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className={controlCls}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setReloadTick((t) => t + 1)}
+            className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+          >
+            刷新
+          </button>
+        </div>
+      </div>
+
       <div className="mb-4 flex gap-2">
         <button
           type="button"
