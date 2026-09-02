@@ -16,6 +16,7 @@ import { importRoutes } from './routes/imports.js';
 import { exportRoutes } from './routes/exports.js';
 import { deepseekRoutes } from './routes/deepseek.js';
 import { aiParseQueueRoutes } from './routes/ai-parse-queue.js';
+import { internalRoutes } from './routes/internal.js';
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api/v1/import', importRoutes);
 app.use('/api/v1/export', exportRoutes);
 app.use('/api/v1/deepseek', deepseekRoutes);
 app.use('/api/v1/ai-parse-queue', aiParseQueueRoutes);
+app.use('/api/v1/internal', internalRoutes);
 
 app.use('/api/v1', (req, res) => {
   res.status(404).json({ error: { code: 'ERR0004', message: 'Not Found' } });
