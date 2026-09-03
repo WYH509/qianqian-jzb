@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- 钱钱家账本 API 服务 launchd plist（PRD §17.3） -->
+<!-- 源文件：deploy/com.qianqian-jzb.api.plist；安装位置：~/Library/LaunchAgents/com.qianqian-jzb.api.plist -->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.qianqian-jzb.api</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>bash</string>
+		<string>-c</string>
+		<string>cd /Users/yuhai/Projects/qianqian-jzb &amp;&amp; exec node apps/api/dist/index.js</string>
+	</array>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>NODE_ENV</key>
+		<string>production</string>
+		<key>PORT</key>
+		<string>3456</string>
+		<key>HOST</key>
+		<string>127.0.0.1</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+
+	<key>WorkingDirectory</key>
+	<string>/Users/yuhai/Projects/qianqian-jzb</string>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+		<key>NetworkState</key>
+		<true/>
+	</dict>
+
+	<key>StandardOutPath</key>
+	<string>/Users/yuhai/Projects/qianqian-jzb/logs/api-stdout.log</string>
+
+	<key>StandardErrorPath</key>
+	<string>/Users/yuhai/Projects/qianqian-jzb/logs/api-stderr.log</string>
+
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+</dict>
+</plist>
