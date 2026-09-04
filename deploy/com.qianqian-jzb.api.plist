@@ -38,6 +38,6 @@
 	<key>ThrottleInterval</key>
 	<integer>10</integer>
 	<key>WorkingDirectory</key>
-	<string>/Users/yuhai/Projects/qianqian-jzb</string>
+	<string>/Users/yuhai/Projects/qianqian-jzb/apps/api</string>
 </dict>
 </plist>
