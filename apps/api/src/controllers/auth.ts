@@ -93,10 +93,25 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     const expiresAt = now + 7 * 24 * 60 * 60 * 1000;
 
     const db = getDb();
+
+    // Avoid UNIQUE(token_hash) collision: remove any previous session for this
+    // user with the same token hash (never other devices' active sessions).
     db.prepare(
-      `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at, last_used_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(sessionId, userId, tokenHash, expiresAt, now, now);
+      `DELETE FROM sessions WHERE user_id = ? AND token_hash = ?`
+    ).run(userId, tokenHash);
+
+    try {
+      db.prepare(
+        `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at, last_used_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).run(sessionId, userId, tokenHash, expiresAt, now, now);
+    } catch (err) {
+      logger.error({ err, userId, sessionId }, 'Session insert failed');
+      res.status(500).json({
+        error: { code: 'ERR0005', message: 'Login failed due to session storage error' },
+      });
+      return;
+    }
 
     // Step 6: Set cookie
     setAuthCookie(res, jwtToken);
@@ -127,9 +142,18 @@ export async function logout(req: Request, res: Response, next: NextFunction): P
     // Remove session from DB
     const tokenHash = sha256(token);
     const db = getDb();
-    const result = db.prepare(
-      `DELETE FROM sessions WHERE token_hash = ?`
-    ).run(tokenHash);
+    let result: { changes: number };
+    try {
+      result = db.prepare(
+        `DELETE FROM sessions WHERE token_hash = ?`
+      ).run(tokenHash);
+    } catch (err) {
+      logger.error({ err, userId }, 'Session delete failed');
+      res.status(500).json({
+        error: { code: 'ERR0005', message: 'Logout failed due to session storage error' },
+      });
+      return;
+    }
 
     clearAuthCookie(res);
 
