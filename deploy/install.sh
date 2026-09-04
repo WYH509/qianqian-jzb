@@ -27,8 +27,20 @@ if [ -e "$PLIST" ]; then
   exit 1
 fi
 
+# 3.5 plist 同步到 LaunchAgents（用 source 覆盖，避免 install.sh 之前的隐式假设）
+mkdir -p "$HOME/Library/LaunchAgents"
+if [ ! -e "$PLIST" ]; then
+  echo "==> cp $REPO_DIR/deploy/com.qianqian-jzb.api.plist $PLIST"
+  cp "$REPO_DIR/deploy/com.qianqian-jzb.api.plist" "$PLIST"
+  chmod 644 "$PLIST"
+  echo "  ✓ plist 复制 + 644 权限"
+elif ! diff -q "$REPO_DIR/deploy/com.qianqian-jzb.api.plist" "$PLIST" > /dev/null 2>&1; then
+  echo "==> 警告：$PLIST 与 source 不同步"
+  echo "    源文件: $REPO_DIR/deploy/com.qianqian-jzb.api.plist"
+  echo "    建议：rm '$PLIST' 然后重跑本脚本"
+fi
+
 # logs/ 目录（plist 的 StandardOutPath/StandardErrorPath 指向这里）
-mkdir -p "$REPO_DIR/logs"
 
 # 4. 依赖安装 + 构建（apps/api + apps/web）
 cd "$REPO_DIR"
@@ -43,10 +55,19 @@ echo "==> npm run migrate"
 npm run migrate
 
 # 6. 加载 launchd 服务
-echo "==> launchctl load $PLIST"
-launchctl load "$PLIST"
+echo "==> launchctl bootstrap $PLIST"
+launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
 echo ""
-echo "✓ 部署完成"
-echo "  访问 http://localhost:3456 验证"
-echo "  日志：$REPO_DIR/logs/api-stdout.log / api-stderr.log"
+# 验证 API 起来了（curl health 2s 后）
+sleep 2
+if curl -sf http://localhost:3456/health > /dev/null 2>&1 || curl -s http://localhost:3456/ > /dev/null 2>&1; then
+  echo "✓ 部署完成（API 在 :3456 监听）"
+  echo "  访问 http://localhost:3456 验证"
+  echo "  日志：$REPO_DIR/logs/api-stdout.log / api-stderr.log"
+else
+  echo "✗ 部署失败：API 没起来"
+  echo "  查：launchctl list | grep qianqian"
+  echo "  查：tail $REPO_DIR/logs/api-stderr.log"
+  exit 1
+fi
