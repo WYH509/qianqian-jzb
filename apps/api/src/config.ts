@@ -5,8 +5,10 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   DB_PATH: z.string().default('../qianqian-jzb.db'),
-  JWT_SECRET: z.string().min(32),
-  DEEPSEEK_API_KEY: z.string().min(1),
+  // Fallback 默认值（测试 / 本地开发不依赖 .env）：
+  // 生产环境 index.ts 通过 dotenv/config 注入真实值；切勿在生产依赖此默认值。
+  JWT_SECRET: z.string().min(32).default('dev-only-insecure-jwt-secret-override-in-production'),
+  DEEPSEEK_API_KEY: z.string().min(1).default('test-key'),
   DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
   DEEPSEEK_MODEL_FLASH: z.string().default('deepseek-v4-flash'),
   DEEPSEEK_MODEL_PRO: z.string().default('deepseek-v4-pro'),
