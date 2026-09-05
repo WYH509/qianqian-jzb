@@ -18,6 +18,7 @@ import { deepseekRoutes } from '../src/routes/deepseek.js';
 import { aiParseQueueRoutes } from '../src/routes/ai-parse-queue.js';
 import { internalRoutes } from '../src/routes/internal.js';
 import { errorHandler } from '../src/middleware/error-handler.js';
+import { ensureCsrfCookie, verifyCsrf } from '../src/middleware/csrf.js';
 
 /**
  * 构造与 src/index.ts 完全一致的 Express app（不含 app.listen），
@@ -40,7 +41,13 @@ export function buildApp(): Express {
     })
   );
 
+  // CSRF：先种 cookie（所有请求，含 GET），再验证状态变更请求。
+  // 豁免路径（verifyCsrf 之前挂载）：login / logout（authRoutes）与 internal/process-queue（loopback 白名单）。
+  app.use(ensureCsrfCookie);
   app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/internal', internalRoutes);
+  app.use('/api/v1', verifyCsrf);
+
   app.use('/api/v1/accounts', accountRoutes);
   app.use('/api/v1/transactions', transactionRoutes);
   app.use('/api/v1/summary', summaryRoutes);
@@ -48,7 +55,6 @@ export function buildApp(): Express {
   app.use('/api/v1/export', exportRoutes);
   app.use('/api/v1/deepseek', deepseekRoutes);
   app.use('/api/v1/ai-parse-queue', aiParseQueueRoutes);
-  app.use('/api/v1/internal', internalRoutes);
 
   app.use('/api/v1', (_req, res) => {
     res.status(404).json({ error: { code: 'ERR0004', message: 'Not Found' } });
@@ -97,4 +103,18 @@ export function resetDb(): void {
     DELETE FROM ai_parse_queue;
     DELETE FROM schema_migrations;
   `);
+}
+
+// --- CSRF 测试辅助（TP-11 P1#3：double-submit cookie） ---
+// 测试用固定 token：verifyCsrf 只校验 cookie===header 字符串相等，不校验 token 格式。
+export const TEST_CSRF = 'test-csrf-token';
+
+/** 返回带 CSRF 校验通过的 header（Cookie: csrf=... + X-CSRF-Token: ...）。
+ *  与 Authorization（Bearer）等既有 header 合并，供 POST/PUT/DELETE 测试自动携带。 */
+export function withCsrf(headers: Record<string, string> = {}): Record<string, string> {
+  return {
+    'X-CSRF-Token': TEST_CSRF,
+    Cookie: `csrf=${TEST_CSRF}`,
+    ...headers,
+  };
 }

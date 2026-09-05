@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config.js';
 import { getDb } from '../db/client.js';
@@ -115,6 +115,17 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
 
     // Step 6: Set cookie
     setAuthCookie(res, jwtToken);
+
+    // TP-11 P1#3：额外种 csrf cookie（double-submit cookie 模式）。
+    // httpOnly=false 因前端 JS 要读它放到 X-CSRF-Token header；登录后浏览器立即持有。
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('csrf', randomBytes(32).toString('hex'), {
+      httpOnly: false,
+      sameSite: 'strict',
+      secure: isProduction,
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     logger.info({ sessionId, userId }, 'User logged in');
 

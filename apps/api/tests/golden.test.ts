@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
-import { buildApp, signToken, resetDb } from './helpers.js';
+import { buildApp, signToken, resetDb, withCsrf } from './helpers.js';
 
 // PRD §10.8 关键路径 golden cases（auth / accounts / transactions / transfer / logout）
 // 端点前缀为 /api/v1（对齐 src/index.ts 挂载），「健康检查」对应根路由 GET /（status:ok）。
 const app: Express = buildApp();
 
 function authHeaders(token: string): Record<string, string> {
-  return { Authorization: `Bearer ${token}` };
+  return withCsrf({ Authorization: `Bearer ${token}` });
 }
 
 function firstCookie(headers: unknown, prefix: string): string | undefined {

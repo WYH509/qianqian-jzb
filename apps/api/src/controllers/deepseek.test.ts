@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
-import { buildApp, signToken, resetDb } from '../../tests/helpers.js';
+import { buildApp, signToken, resetDb, withCsrf } from '../../tests/helpers.js';
 import { getDb } from '../db/client.js';
 
 vi.mock('../services/deepseek-service.js', async (importOriginal) => {
@@ -15,7 +15,7 @@ const executeAiParseTaskMock = executeAiParseTask as unknown as ReturnType<typeo
 
 const app: Express = buildApp();
 const token = signToken();
-const authHeaders = { Authorization: `Bearer ${token}` };
+const authHeaders = withCsrf({ Authorization: `Bearer ${token}` });
 
 function enqueue(status: string, taskType = 'excel'): number {
   return Number(

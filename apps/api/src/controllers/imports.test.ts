@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { buildApp, signToken, resetDb } from '../../tests/helpers.js';
+import { buildApp, signToken, resetDb, withCsrf } from '../../tests/helpers.js';
 import { getDb } from '../db/client.js';
 import { sha256 } from '../utils/excel-parser.js';
 import { makeStandardStatementXlsx } from '../../tests/fixtures/xlsx.js';
@@ -24,7 +24,7 @@ const getTimeWindowMock = getTimeWindow as unknown as ReturnType<typeof vi.fn>;
 
 const app: Express = buildApp();
 const token = signToken();
-const authHeaders = { Authorization: `Bearer ${token}` };
+const authHeaders = withCsrf({ Authorization: `Bearer ${token}` });
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 

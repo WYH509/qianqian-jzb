@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { ensureCsrfCookie, verifyCsrf } from './middleware/csrf.js';
 import { authRoutes } from './routes/auth.js';
 import { accountRoutes } from './routes/accounts.js';
 import { transactionRoutes } from './routes/transactions.js';
@@ -39,7 +40,13 @@ app.get('/', (req, res) =>
   })
 );
 
+// CSRF：先种 cookie（所有请求，含 GET），再验证状态变更请求。
+// 豁免路径（verifyCsrf 之前挂载）：login / logout（authRoutes）与 internal/process-queue（loopback 白名单）。
+app.use(ensureCsrfCookie);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/internal', internalRoutes);
+app.use('/api/v1', verifyCsrf);
+
 app.use('/api/v1/accounts', accountRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/summary', summaryRoutes);
@@ -47,7 +54,6 @@ app.use('/api/v1/import', importRoutes);
 app.use('/api/v1/export', exportRoutes);
 app.use('/api/v1/deepseek', deepseekRoutes);
 app.use('/api/v1/ai-parse-queue', aiParseQueueRoutes);
-app.use('/api/v1/internal', internalRoutes);
 
 app.use('/api/v1', (req, res) => {
   res.status(404).json({ error: { code: 'ERR0004', message: 'Not Found' } });
