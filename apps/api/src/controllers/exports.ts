@@ -3,6 +3,32 @@ import { z } from 'zod';
 import ExcelJS from 'exceljs';
 import { getDb } from '../db/client.js';
 
+// --- audit_log 写入（对齐 accounts/transactions 本地 writeAudit 风格） ---
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function writeAudit(params: {
+  action: 'export';
+  userId: string;
+  entityId?: string | null;
+  details?: unknown;
+  errorCategory?: string | null;
+}): void {
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO audit_log (user_id, action, entity_type, entity_id, details, error_category, created_at)
+     VALUES (?, ?, 'excel', ?, ?, ?, ?)`
+  ).run(
+    params.userId,
+    params.action,
+    params.entityId,
+    JSON.stringify(params.details),
+    params.errorCategory,
+    Date.now()
+  );
+}
+
 // --- Query schema ---
 const exportQuerySchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -17,6 +43,7 @@ export async function exportTransactions(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const userId = req.user?.userId ?? 'unknown';
   try {
     const result = exportQuerySchema.safeParse(req.query);
     if (!result.success) {
@@ -104,13 +131,28 @@ export async function exportTransactions(
       `attachment; filename="${fileName}"`
     );
 
+    writeAudit({
+      action: 'export',
+      userId,
+      entityId: fileName,
+      details: {
+        row_count: rows.length,
+        format: result.data.format,
+        start_date: startDate ?? null,
+        end_date: endDate ?? null,
+        account_id: accountId ?? null,
+      },
+    });
+
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
-    if (err instanceof Error && !err.message.startsWith('Invalid')) {
-      next(err);
-    } else {
-      next(err);
-    }
+    writeAudit({
+      action: 'export',
+      userId,
+      details: { error: errMsg(err) },
+      errorCategory: 'export_failed',
+    });
+    next(err);
   }
 }

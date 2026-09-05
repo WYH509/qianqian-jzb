@@ -15,6 +15,44 @@ import {
 import { executeAiParseTask, type AiParseTaskInput } from '../services/deepseek-service.js';
 import { getTimeWindow } from '../utils/time-window.js';
 
+// --- audit_log 写入（对齐 accounts/transactions 本地 writeAudit 风格；补 model 列供 ai_parse） ---
+// 注意：action 受表 CHECK 约束限制（create/update/delete/login/logout/export/ai_parse），
+// 成功/失败用 error_category 区分（对齐 auth.ts 的 auth_failure 惯例），不新增 action 值。
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function getUserId(req: Request): string {
+  return req.user?.userId ?? 'unknown';
+}
+
+interface AuditParams {
+  action: 'create' | 'delete' | 'ai_parse';
+  userId: string;
+  entityType: 'excel' | 'ai_call';
+  entityId?: string | null;
+  details?: unknown;
+  errorCategory?: string | null;
+  model?: string | null;
+}
+
+function writeAudit(params: AuditParams): void {
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO audit_log (user_id, action, entity_type, entity_id, details, error_category, model, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    params.userId,
+    params.action,
+    params.entityType,
+    params.entityId,
+    JSON.stringify(params.details),
+    params.errorCategory,
+    params.model,
+    Date.now()
+  );
+}
+
 // --- Row types ---
 interface PreviewRow {
   rowIndex: number;
@@ -87,6 +125,7 @@ export async function importPreview(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const userId = getUserId(req);
   try {
     if (!req.file) {
       throw new AppError(400, 'ERR0001', '未上传文件');
@@ -197,6 +236,14 @@ export async function importPreview(
        VALUES (?, ?, ?, ?, 'pending', ?)`
     ).run(id, fileHash, fileName, preview.length, Date.now());
 
+    writeAudit({
+      action: 'create',
+      userId,
+      entityType: 'excel',
+      entityId: id,
+      details: { file_name: fileName, row_count: preview.length },
+    });
+
     res.json({
       data: {
         batchId: id,
@@ -209,6 +256,13 @@ export async function importPreview(
       },
     });
   } catch (err) {
+    writeAudit({
+      action: 'create',
+      userId,
+      entityType: 'excel',
+      details: { file_name: req.file?.originalname ?? null, error: errMsg(err) },
+      errorCategory: 'import_preview_failed',
+    });
     next(err);
   }
 }
@@ -219,6 +273,7 @@ export async function importConfirm(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const userId = getUserId(req);
   try {
     const result = confirmSchema.safeParse(req.body);
     if (!result.success) {
@@ -295,6 +350,18 @@ export async function importConfirm(
       `UPDATE import_history SET status = 'confirmed' WHERE id = ?`
     ).run(batch.id);
 
+    writeAudit({
+      action: 'create',
+      userId,
+      entityType: 'excel',
+      entityId: batch.id,
+      details: {
+        account_id: accountId,
+        imported_count: insertedIds.length,
+        skipped_count: skippedIndexes.length,
+      },
+    });
+
     res.status(201).json({
       data: {
         batchId: batch.id,
@@ -303,6 +370,13 @@ export async function importConfirm(
       },
     });
   } catch (err) {
+    writeAudit({
+      action: 'create',
+      userId,
+      entityType: 'excel',
+      details: { file_hash: req.body?.fileHash, error: errMsg(err) },
+      errorCategory: 'import_confirm_failed',
+    });
     next(err);
   }
 }
@@ -372,6 +446,7 @@ export function rollbackImport(
   res: Response,
   next: NextFunction
 ): void {
+  const userId = getUserId(req);
   try {
     const id = req.params.id;
     if (!id) throw new AppError(400, 'ERR0001', '缺少批次 ID');
@@ -399,8 +474,24 @@ export function rollbackImport(
       `UPDATE import_history SET status = 'rolled_back' WHERE id = ?`
     ).run(id);
 
+    writeAudit({
+      action: 'delete',
+      userId,
+      entityType: 'excel',
+      entityId: id,
+      details: { rolled_back_count: result.changes },
+    });
+
     res.json({ data: { rolledBackCount: result.changes } });
   } catch (err) {
+    writeAudit({
+      action: 'delete',
+      userId,
+      entityType: 'excel',
+      entityId: req.params.id,
+      details: { error: errMsg(err) },
+      errorCategory: 'import_rollback_failed',
+    });
     next(err);
   }
 }
@@ -411,6 +502,8 @@ export async function aiParse(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const userId = getUserId(req);
+  const startedAt = Date.now();
   try {
     if (!req.file) {
       throw new AppError(400, 'ERR0001', '未上传文件');
@@ -426,9 +519,23 @@ export async function aiParse(
     };
 
     const outcome = await executeAiParseTask(input);
+    const latencyMs = Date.now() - startedAt;
     const timeWindow = getTimeWindow();
 
     if (outcome.ok) {
+      writeAudit({
+        action: 'ai_parse',
+        userId,
+        entityType: 'ai_call',
+        details: {
+          file_type: fileType,
+          tokens_in: outcome.usage.prompt_tokens,
+          tokens_out: outcome.usage.completion_tokens,
+          tokens_total: outcome.usage.total_tokens,
+          latency_ms: latencyMs,
+        },
+        model: outcome.model,
+      });
       // 200 + completed
       res.json({
         status: 'completed',
@@ -437,6 +544,14 @@ export async function aiParse(
         transactions: outcome.data,
       });
     } else if (outcome.kind === 'queued') {
+      writeAudit({
+        action: 'ai_parse',
+        userId,
+        entityType: 'ai_call',
+        entityId: outcome.queueId ? String(outcome.queueId) : null,
+        details: { file_type: fileType, latency_ms: latencyMs },
+        errorCategory: 'ai_parse_queued',
+      });
       // 202 + queued
       res.status(202).json({
         status: 'queued',
@@ -447,6 +562,18 @@ export async function aiParse(
         message: outcome.message,
       });
     } else {
+      writeAudit({
+        action: 'ai_parse',
+        userId,
+        entityType: 'ai_call',
+        details: {
+          file_type: fileType,
+          kind: outcome.kind,
+          error: outcome.message,
+          latency_ms: latencyMs,
+        },
+        errorCategory: 'ai_parse_failed',
+      });
       // 转人工（4 类失败转人工）
       res.status(503).json({
         status: 'failed',
@@ -455,6 +582,13 @@ export async function aiParse(
       });
     }
   } catch (err) {
+    writeAudit({
+      action: 'ai_parse',
+      userId,
+      entityType: 'ai_call',
+      details: { error: errMsg(err), latency_ms: Date.now() - startedAt },
+      errorCategory: 'ai_parse_failed',
+    });
     next(err);
   }
 }
