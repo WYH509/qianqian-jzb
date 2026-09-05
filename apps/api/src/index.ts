@@ -18,6 +18,8 @@ import { exportRoutes } from './routes/exports.js';
 import { deepseekRoutes } from './routes/deepseek.js';
 import { aiParseQueueRoutes } from './routes/ai-parse-queue.js';
 import { internalRoutes } from './routes/internal.js';
+import cron from 'node-cron';
+import { cleanupExpiredSessions } from './utils/session-cleanup.js';
 
 const app = express();
 
@@ -64,6 +66,29 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT) || 3456;
 // 显式绑 HOST（默认 127.0.0.1）：不裸 listen 到 0.0.0.0，避免局域网/公网暴露（最小权限，PRD §16.4/§16.8）。
 const HOST = config.HOST || '127.0.0.1';
+
+// Session 过期清理（PRD §16.5 P2）：node-cron 每小时跑一次，删除 expires_at < now 的过期 token。
+const sessionCleanupJob = cron.schedule('0 * * * *', () => {
+  try {
+    cleanupExpiredSessions();
+  } catch (err) {
+    logger.error({ err }, 'Session cleanup failed');
+  }
+});
+
+// 启动时立即跑一次（清理历史残留）。
+cleanupExpiredSessions();
+
+// Graceful shutdown：停 cron 后最后再清一次。
+const shutdown = (signal: string) => {
+  logger.info({ signal }, 'Shutting down');
+  sessionCleanupJob.stop();
+  cleanupExpiredSessions();
+  process.exit(0);
+};
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 app.listen(PORT, HOST, () => {
   logger.info(`Server running on ${HOST}:${PORT}`);
 });
