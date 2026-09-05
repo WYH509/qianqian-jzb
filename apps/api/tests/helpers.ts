@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
+import { createHash } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { config } from '../src/config.js';
 import { getDb } from '../src/db/client.js';
 import { authRoutes } from '../src/routes/auth.js';
@@ -57,9 +59,31 @@ export function buildApp(): Express {
   return app;
 }
 
-/** 直接签发 owner 的 JWT（与 authMiddleware 用同一 config.JWT_SECRET），绕过登录限流。 */
+/** 直接签发 owner 的 JWT（与 authMiddleware 用同一 config.JWT_SECRET），绕过登录限流。
+ *  同时写入 sessions 表（绕过 middleware 的 session check，对齐 login 行为）。 */
 export function signToken(userId = 'owner'): string {
-  return jwt.sign({ userId }, config.JWT_SECRET, { expiresIn: '7d' });
+  // jti 保证每次签发的 token 唯一（避免同秒签发出相同 JWT，token_hash 冲突）
+  const token = jwt.sign({ userId, jti: uuidv4() }, config.JWT_SECRET, { expiresIn: '7d' });
+  const now = Date.now();
+  getDb()
+    .prepare(
+      `INSERT OR IGNORE INTO sessions (id, user_id, token_hash, expires_at, created_at, last_used_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      uuidv4(),
+      userId,
+      createHash('sha256').update(token).digest('hex'),
+      now + 7 * 24 * 60 * 60 * 1000,
+      now,
+      now
+    );
+  return token;
+}
+
+/** 只签发 owner 的 JWT，不写 sessions 表（用于验证 session check 的拒绝路径）。 */
+export function signTokenOnly(userId = 'owner'): string {
+  return jwt.sign({ userId, jti: uuidv4() }, config.JWT_SECRET, { expiresIn: '7d' });
 }
 
 /** 清空所有业务表（每个 golden case 前调用，保证隔离）。 */
@@ -68,7 +92,6 @@ export function resetDb(): void {
   db.exec(`
     DELETE FROM transactions;
     DELETE FROM accounts;
-    DELETE FROM sessions;
     DELETE FROM audit_log;
     DELETE FROM import_history;
     DELETE FROM ai_parse_queue;

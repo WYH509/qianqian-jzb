@@ -149,12 +149,23 @@ describe('TP-12 golden cases', () => {
     expect(res.body.error.code).toBe('ERR3001');
   });
 
-  it('10. 注销 → 200 + 清 cookie（旧 token 彻底失效需 middleware 加 sessions 校验后落地）', async () => {
-    const token = signToken();
-    const res = await request(app).post('/api/v1/auth/logout').set(authHeaders(token));
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    const clearCookie = firstCookie(res.headers['set-cookie'], 'token=');
-    expect(clearCookie).toBeDefined();
+  it('10. logout 后旧 token 应该 401（sessions 表删除使 token 失效）', async () => {
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ username: 'owner', password: 'owner123' });
+    expect(loginRes.status).toBe(200);
+    const cookie = firstCookie(loginRes.headers['set-cookie'], 'token=');
+    expect(cookie).toBeDefined();
+    // 只保留 name=value（去掉 Max-Age/Expires/HttpOnly 等 Set-Cookie 属性）
+    const authCookie = cookie!.split(';')[0]!;
+
+    // 确认注销前 token 能用
+    await request(app).get('/api/v1/accounts').set('Cookie', authCookie).expect(200);
+
+    // 注销（删除 sessions 表对应行 + 清 cookie）
+    await request(app).post('/api/v1/auth/logout').set('Cookie', authCookie).expect(200);
+
+    // 旧 cookie 失效（sessions 行已删除）
+    await request(app).get('/api/v1/accounts').set('Cookie', authCookie).expect(401);
   });
 });
