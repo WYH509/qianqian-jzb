@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const schema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3456),
+  HOST: z.string().default('127.0.0.1'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   DB_PATH: z.string().default('../qianqian-jzb.db'),

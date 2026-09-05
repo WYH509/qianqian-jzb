@@ -62,6 +62,8 @@ app.use('/api/v1', (req, res) => {
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT) || 3456;
-app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
+// 显式绑 HOST（默认 127.0.0.1）：不裸 listen 到 0.0.0.0，避免局域网/公网暴露（最小权限，PRD §16.4/§16.8）。
+const HOST = config.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => {
+  logger.info(`Server running on ${HOST}:${PORT}`);
 });
