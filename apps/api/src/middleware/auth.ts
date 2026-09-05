@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
+import { writeAudit } from '../utils/audit.js';
 
 export interface AuthUser {
   userId: string;
@@ -23,6 +24,14 @@ export function authMiddleware(
     req.headers.authorization?.replace('Bearer ', '');
 
   if (!token) {
+    writeAudit({
+      action: 'login',
+      userId: 'unknown',
+      errorCategory: 'unauthorized_access',
+      details: 'missing token',
+      ip: req.ip ?? null,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
     res.status(401).json({ error: { code: 'ERR0002', message: 'Unauthorized' } });
     return;
   }
@@ -32,6 +41,14 @@ export function authMiddleware(
     req.user = payload;
     next();
   } catch {
+    writeAudit({
+      action: 'login',
+      userId: 'unknown',
+      errorCategory: 'unauthorized_access',
+      details: 'invalid or expired token',
+      ip: req.ip ?? null,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
     res.status(401).json({ error: { code: 'ERR0002', message: 'Token invalid or expired' } });
   }
 }

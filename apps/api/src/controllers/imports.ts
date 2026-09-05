@@ -42,7 +42,7 @@ const confirmSchema = z.object({
     .array(
       z.object({
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        amount: z.number().finite(),
+        amount: z.number().finite('金额必须是有限数字').positive('金额必须大于 0'),
         type: z.enum(['income', 'expense']),
         category: z.string().max(50).optional().nullable(),
         note: z.string().max(500).optional().nullable(),

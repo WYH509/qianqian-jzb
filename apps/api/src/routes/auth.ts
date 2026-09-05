@@ -2,13 +2,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { login, logout } from '../controllers/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { loginLimiter } from '../middleware/rate-limit.js';
 import { AppError } from '../middleware/error-handler.js';
 
 export const authRoutes = Router();
 
 // --- POST /api/v1/auth/login ---
 // Zod validation inline
-authRoutes.post('/login', (req, res, next) => {
+authRoutes.post('/login', loginLimiter, (req, res, next) => {
   const result = z
     .object({
       username: z.string().min(1, 'username is required').max(50),
