@@ -45,3 +45,12 @@ jobs:
           name: coverage
           path: apps/api/coverage/
           retention-days: 30
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./apps/api/coverage/lcov.info
+          flags: api
+          fail_ci_if_error: false  # 不激活时不强失败
+          token: ${{ secrets.CODECOV_TOKEN }}
