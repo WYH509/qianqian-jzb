@@ -28,7 +28,7 @@ function seedTx(): string {
 beforeEach(() => resetDb());
 
 // 二进制响应收集器（xlsx 非 JSON）
-function binaryParser(res: NodeJS.ReadableStream, cb: (err: Error | null, body: Buffer) => void): void {
+function binaryParser(res: request.Response, cb: (err: Error | null, body: Buffer) => void): void {
   const chunks: Buffer[] = [];
   res.on('data', (c: Buffer | string) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
   res.on('end', () => cb(null, Buffer.concat(chunks)));

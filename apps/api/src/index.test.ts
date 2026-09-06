@@ -26,7 +26,7 @@ describe('index.ts（TP-11 P1#4：显式绑 HOST）', () => {
     await import('./index.js');
 
     expect(appMock.listen).toHaveBeenCalledTimes(1);
-    const [port, host, callback] = appMock.listen.mock.calls[0];
+    const [port, host, callback] = appMock.listen.mock.calls[0] ?? [];
     expect(port).toBe(3456);
     expect(host).toBe('127.0.0.1');
     expect(callback).toBeTypeOf('function');
