@@ -26,6 +26,13 @@ function getUserId(req: Request): string {
   return req.user?.userId ?? 'unknown';
 }
 
+// Express 5 下 req.params 类型为 string | string[] | undefined（即使路由是 /:id 单段），
+// 取单段 param 的字符串值，供 writeAudit 的 entityId: string | null | undefined 使用。
+function firstParam(v: string | string[] | undefined): string {
+  if (Array.isArray(v)) return v[0] ?? '';
+  return v ?? '';
+}
+
 interface AuditParams {
   action: 'create' | 'delete' | 'ai_parse';
   userId: string;
@@ -448,7 +455,7 @@ export function rollbackImport(
 ): void {
   const userId = getUserId(req);
   try {
-    const id = req.params.id;
+    const id = firstParam(req.params.id);
     if (!id) throw new AppError(400, 'ERR0001', '缺少批次 ID');
 
     const db = getDb();
@@ -488,7 +495,7 @@ export function rollbackImport(
       action: 'delete',
       userId,
       entityType: 'excel',
-      entityId: req.params.id,
+      entityId: firstParam(req.params.id),
       details: { error: errMsg(err) },
       errorCategory: 'import_rollback_failed',
     });
