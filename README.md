@@ -1,5 +1,7 @@
 # 钱钱家账本（Qianqian Jia Zhang Ben）
 
+[![codecov](https://codecov.io/gh/yuhai/qianqian-jzb/branch/main/graph/badge.svg)](https://codecov.io/gh/yuhai/qianqian-jzb)
+
 > 单人本地记账应用 · PRD V2 已完稿 · 2026-08-27 启动开发
 
 ## 📚 PRD
