@@ -65,12 +65,23 @@ jobs:
           echo "major=$MAJOR" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body_path: CHANGELOG.md
-          draft: true  # 默认 draft，大海审核后才 publish
+          # draft: true → release 以「草稿」创建（step 显示 success 是正常的）。
+          # ⚠️ 草稿 release 不会出现在匿名(未认证)的 Releases API：
+          #   /releases、/releases/latest、/releases/tags/{tag} 都只返回【已发布】release。
+          # 所以「API 返回 0 release」≠ 没创建，而是草稿对匿名 API 不可见。
+          # 查看/发布草稿：登录 web UI → Releases → Drafts，或 `gh release edit <tag> --draft=false`。
+          draft: true
           generate_release_notes: false  # 用我们自己的
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log release URL
+        run: |
+          echo "✅ Draft release created: ${{ steps.create_release.outputs.url }}"
+          echo "   （草稿不出现在匿名 API，去 web UI Releases → Drafts 查看并 Publish）"
