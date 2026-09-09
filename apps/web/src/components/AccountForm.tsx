@@ -26,7 +26,7 @@ export default function AccountForm({ mode, initial, onSuccess, onCancel }: Acco
   const [name, setName] = useState<string>(() => initial?.name ?? '');
   const [type, setType] = useState<AccountType>(() => initial?.type ?? 'cash');
   const [initialBalance, setInitialBalance] = useState<string>(() =>
-    initial ? String(initial.initial_balance) : ''
+    initial ? String(initial.initialBalance) : ''
   );
   const [currency, setCurrency] = useState<string>(() =>
     isEdit && initial ? initial.currency : 'CNY'
@@ -65,13 +65,13 @@ export default function AccountForm({ mode, initial, onSuccess, onCancel }: Acco
         await createAccount({
           name: trimmedName,
           type,
-          initial_balance: balance,
+          initialBalance: balance,
           currency: trimmedCurrency,
         });
       } else if (initial) {
         await updateAccount(initial.id, {
           name: trimmedName,
-          initial_balance: balance,
+          initialBalance: balance,
           currency: trimmedCurrency,
         });
       }

@@ -232,7 +232,7 @@ export default function Transactions() {
               {result.data.map((txn) => (
                 <tr key={txn.id} className="border-b border-gray-100 last:border-b-0">
                   <td className="px-4 py-3 text-gray-700">{txn.date}</td>
-                  <td className="px-4 py-3 text-gray-700">{txn.account_name ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-700">{txn.accountName ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{TYPE_LABELS[txn.type]}</td>
                   <td
                     className={`px-4 py-3 text-right font-medium tabular-nums ${

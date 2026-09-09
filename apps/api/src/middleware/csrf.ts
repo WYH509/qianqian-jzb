@@ -17,7 +17,9 @@ export function ensureCsrfCookie(req: Request, res: Response, next: NextFunction
     res.cookie(CSRF_COOKIE, token, {
       httpOnly: false, // 关键：前端 JS 要读
       sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
+      // 用 req.secure 判断（不是 NODE_ENV）— 后端 launchd plist 设了 NODE_ENV=production，
+      // 但本机实际是 HTTP，prod 假设导致 Secure=true → 浏览器非 HTTPS 不发 cookie → CSRF 验证失败
+      secure: req.secure,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });

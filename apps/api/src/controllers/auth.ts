@@ -21,21 +21,21 @@ function sha256(input: string): string {
 }
 
 function setAuthCookie(res: Response, token: string): void {
-  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('token', token, {
     httpOnly: true,
     sameSite: 'strict',
-    secure: isProduction,
+    // res.req.secure 反映实际请求 scheme（不是 NODE_ENV）。
+    // launchd plist 设 NODE_ENV=production 但本机是 HTTP → 原 Secure=true 导致浏览器不发 cookie。
+    secure: res.req.secure,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
   });
 }
 
 function clearAuthCookie(res: Response): void {
-  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('token', {
     httpOnly: true,
     sameSite: 'strict',
-    secure: isProduction,
+    secure: res.req.secure,
   });
 }
 
@@ -118,11 +118,12 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
 
     // TP-11 P1#3：额外种 csrf cookie（double-submit cookie 模式）。
     // httpOnly=false 因前端 JS 要读它放到 X-CSRF-Token header；登录后浏览器立即持有。
-    const isProduction = process.env.NODE_ENV === 'production';
+    // secure 用 res.req.secure（不是 NODE_ENV）—— launchd plist 设了 NODE_ENV=production，
+    // 但本机实际是 HTTP，prod 假设导致 Secure=true → 浏览器不发 cookie → 后续请求永远缺 CSRF header
     res.cookie('csrf', randomBytes(32).toString('hex'), {
       httpOnly: false,
       sameSite: 'strict',
-      secure: isProduction,
+      secure: res.req.secure,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });

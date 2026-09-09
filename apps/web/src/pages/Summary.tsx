@@ -168,10 +168,10 @@ export default function Summary() {
               </thead>
               <tbody>
                 {accountRows.map((row) => (
-                  <tr key={row.account_id} className="border-b border-gray-100 last:border-b-0">
-                    <td className="px-4 py-3 text-gray-900">{row.account_name}</td>
+                  <tr key={row.accountId} className="border-b border-gray-100 last:border-b-0">
+                    <td className="px-4 py-3 text-gray-900">{row.accountName}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-gray-700">
-                      {row.initial_balance.toFixed(2)}
+                      {row.initialBalance.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-green-600">
                       {row.income.toFixed(2)}

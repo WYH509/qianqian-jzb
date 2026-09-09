@@ -22,7 +22,7 @@ export async function getAccount(id: string): Promise<Account> {
 export async function createAccount(input: {
   name: string;
   type: Account['type'];
-  initial_balance?: number;
+  initialBalance?: number;
   currency?: string;
 }): Promise<Account> {
   const res = await apiFetch<{ data: Account }>('/api/v1/accounts', {
@@ -35,7 +35,7 @@ export async function createAccount(input: {
 // PUT /api/v1/accounts/:id — 名称 / 期初余额 / 币种（type 不可改）
 export async function updateAccount(
   id: string,
-  input: { name?: string; initial_balance?: number; currency?: string }
+  input: { name?: string; initialBalance?: number; currency?: string }
 ): Promise<Account> {
   const res = await apiFetch<{ data: Account }>(`/api/v1/accounts/${encodeURIComponent(id)}`, {
     method: 'PUT',

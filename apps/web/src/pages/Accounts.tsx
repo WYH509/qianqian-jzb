@@ -110,32 +110,32 @@ export default function Accounts() {
                 <tr
                   key={acc.id}
                   className={`border-b border-gray-100 last:border-b-0 ${
-                    acc.is_archived ? 'bg-gray-50' : ''
+                    acc.archived ? 'bg-gray-50' : ''
                   }`}
                 >
                   <td
                     className={`px-4 py-3 ${
-                      acc.is_archived ? 'text-gray-400' : 'text-gray-900'
+                      acc.archived ? 'text-gray-400' : 'text-gray-900'
                     }`}
                   >
                     {acc.name}
                   </td>
                   <td
                     className={`px-4 py-3 ${
-                      acc.is_archived ? 'text-gray-400' : 'text-gray-700'
+                      acc.archived ? 'text-gray-400' : 'text-gray-700'
                     }`}
                   >
                     {TYPE_LABELS[acc.type]}
                   </td>
                   <td
                     className={`px-4 py-3 text-right tabular-nums ${
-                      acc.is_archived ? 'text-gray-400' : 'text-gray-900'
+                      acc.archived ? 'text-gray-400' : 'text-gray-900'
                     }`}
                   >
-                    {(acc.net ?? acc.initial_balance).toFixed(2)}
+                    {acc.balance.toFixed(2)}
                   </td>
                   <td className="px-4 py-3">
-                    {acc.is_archived ? (
+                    {acc.archived ? (
                       <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">
                         已归档
                       </span>
@@ -154,7 +154,7 @@ export default function Accounts() {
                       >
                         编辑
                       </button>
-                      {!acc.is_archived && (
+                      {!acc.archived && (
                         <button
                           type="button"
                           disabled={archivingId !== null}

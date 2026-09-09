@@ -2,8 +2,8 @@ import { apiFetch } from './client';
 import type { ImportHistoryItem, ImportPreviewResponse } from '../lib/types';
 
 export interface ConfirmImportInput {
-  file_hash: string;
-  account_id: string;
+  fileHash: string;
+  accountId: string;
   rows: Array<{
     rowIndex: number;
     date: string;

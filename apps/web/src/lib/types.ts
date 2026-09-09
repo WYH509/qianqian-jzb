@@ -6,32 +6,32 @@ export interface Account {
   id: string;
   name: string;
   type: AccountType;
-  initial_balance: number;
+  initialBalance: number;
   currency: string;
-  is_archived: boolean;
-  created_at: string;
-  updated_at: string;
-  /** 净变动（不含期初余额），实时余额接口附带 */
-  net?: number;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** 实时余额（initialBalance + 净变动） */
+  balance: number;
 }
 
 export type TxnType = 'income' | 'expense' | 'transfer_in' | 'transfer_out';
 
 export interface Transaction {
   id: string;
-  account_id: string;
+  accountId: string;
   type: TxnType;
   amount: number;
   category: string | null;
   note: string | null;
   date: string;
-  transfer_group_id: string | null;
-  import_batch_id: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
+  transferGroupId: string | null;
+  importBatchId: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
   /** 列表接口 JOIN 附带 */
-  account_name?: string | null;
+  accountName?: string | null;
 }
 
 export interface Pagination {
@@ -47,14 +47,14 @@ export interface Paginated<T> {
 }
 
 export interface AccountSummaryRow {
-  account_id: string;
-  account_name: string;
+  accountId: string;
+  accountName: string;
   type: AccountType;
-  initial_balance: number;
+  initialBalance: number;
   income: number;
   expense: number;
-  transfer_in: number;
-  transfer_out: number;
+  transferIn: number;
+  transferOut: number;
   net: number;
   balance: number;
 }

@@ -49,7 +49,7 @@ export default function TransactionForm({
     isEdit && initial ? toFormType(initial.type) : 'expense'
   );
   const [accountId, setAccountId] = useState<string>(
-    () => initial?.account_id ?? accounts[0]?.id ?? ''
+    () => initial?.accountId ?? accounts[0]?.id ?? ''
   );
   const [fromAccountId, setFromAccountId] = useState<string>(() => accounts[0]?.id ?? '');
   const [toAccountId, setToAccountId] = useState<string>(() => accounts[1]?.id ?? '');
@@ -65,7 +65,7 @@ export default function TransactionForm({
 
   // edit 模式账户也可能被归档而不在 accounts 里，补一个原账户选项避免 select 悬空
   const missingInitialAccount =
-    isEdit && initial !== undefined && !accounts.some((a) => a.id === initial.account_id);
+    isEdit && initial !== undefined && !accounts.some((a) => a.id === initial.accountId);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -214,7 +214,7 @@ export default function TransactionForm({
               ))}
               {missingInitialAccount && (
                 <option value={initial?.id ?? ''}>
-                  {initial?.account_name ?? '原账户'}
+                  {initial?.accountName ?? '原账户'}
                 </option>
               )}
             </select>
