@@ -181,3 +181,18 @@ export async function logout(req: Request, res: Response, next: NextFunction): P
     next(err);
   }
 }
+
+// --- Me (protected) — AuthProvider 硬刷新后 bootstrap 登录态用 ---
+// 之前：硬刷新时 isAuthenticated 永远 false → ProtectedRoute 跳 /login，强制用户重新登录
+// 修后：AuthProvider mount 时调用本端点 → 200 设 isAuthenticated=true + username；401 保持 false
+export async function me(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(401, 'ERR0002', 'Unauthorized');
+    }
+    res.json({ data: { username: userId } });
+  } catch (err) {
+    next(err);
+  }
+}

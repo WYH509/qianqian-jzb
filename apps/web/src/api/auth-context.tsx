@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { apiFetch } from './client';
 
 export interface AuthState {
@@ -16,6 +16,27 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+
+  // 硬刷新后 bootstrap 登录态：调用 GET /auth/me，token cookie 自动随请求发，
+  // 后端用 authMiddleware 验证 session：200 → 已登录；401 → 未登录（保持 false）
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<{ data?: { username?: string } }>('/api/v1/auth/me')
+      .then((res) => {
+        if (cancelled) return;
+        const u = res?.data?.username;
+        if (u) {
+          setIsAuthenticated(true);
+          setUsername(u);
+        }
+      })
+      .catch(() => {
+        // 未登录 / 网络错 / token 过期 都保持 false（ProtectedRoute 会跳 /login）
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function login(user: string, password: string): Promise<void> {
     const res = await apiFetch<{ data?: { username?: string } }>('/api/v1/auth/login', {

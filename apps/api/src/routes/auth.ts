@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { login, logout } from '../controllers/auth.js';
+import { login, logout, me } from '../controllers/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { AppError } from '../middleware/error-handler.js';
 
@@ -30,3 +30,7 @@ authRoutes.post('/login', (req, res, next) => {
 
 // --- POST /api/v1/auth/logout (protected) ---
 authRoutes.post('/logout', authMiddleware, logout);
+
+// --- GET /api/v1/auth/me (protected) — 用于 AuthProvider 硬刷新后 bootstrap 登录态
+// （之前 AuthProvider 硬刷新时 isAuthenticated 永远 false → ProtectedRoute 跳 /login，要求用户重新登录）
+authRoutes.get('/me', authMiddleware, me);
