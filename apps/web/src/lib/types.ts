@@ -83,7 +83,7 @@ export interface AiParseQueueItem {
   status: QueueStatus;
   attempts: number;
   max_attempts: number;
-  model: 'flash' | 'pro';
+  model: 'flash';
   error_code: string | null;
   error_message: string | null;
   result: unknown | null;

@@ -4,7 +4,7 @@
 > 总时长预算：18:10 - 08:00 = 13h50m（含 30m buffer）
 
 ## 全局约束（已锁）
-- subagent 模型：deepseek-v4-flash（结构化任务）/ deepseek-v4-pro（debug / 多步推理 / 含图片 / AI 集成）
+- subagent 模型：deepseek-flash（结构化任务）/ deepseek-v4.1-pro（debug / 多步推理 / 含图片 / AI 集成）
 - 同时 ≤3 个 subagent 并行
 - 高峰期前 30 分停止 spawn 新任务（08:30 / 13:30）
 - main agent（M3）做测试 / 集成 / 验收；Debug 让 subagent 用 DeepSeek

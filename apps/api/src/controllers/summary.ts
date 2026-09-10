@@ -106,6 +106,7 @@ export function listAccountSummary(
     type: r.type,
     currency: r.currency,
     archived: r.archived === 1,
+    initialBalance: r.initial_balance,
     income: r.income,
     expense: r.expense,
     transferNet: r.transfer_in - r.transfer_out,

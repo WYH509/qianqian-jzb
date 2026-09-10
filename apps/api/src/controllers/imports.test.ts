@@ -252,7 +252,7 @@ describe('POST /api/v1/import/ai-parse', () => {
   it('completed → 200 + transactions', async () => {
     executeAiParseTaskMock.mockResolvedValue({
       ok: true,
-      model: 'pro',
+      model: 'flash',
       usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 },
       data: [{ date: '2026-08-20', amount: 5000, type: 'income' }],
     });
@@ -262,7 +262,7 @@ describe('POST /api/v1/import/ai-parse', () => {
       .attach('file', Buffer.from('%PDF'), { filename: 's.pdf', contentType: 'application/pdf' });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('completed');
-    expect(res.body.model).toBe('pro');
+    expect(res.body.model).toBe('flash');
   });
 
   it('queued → 202 + queueId', async () => {

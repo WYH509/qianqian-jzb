@@ -3,7 +3,7 @@
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 
-export type DeepSeekModel = 'flash' | 'pro';
+export type DeepSeekModel = 'flash';
 
 export interface DeepSeekMessage {
   role: 'system' | 'user' | 'assistant';
@@ -58,11 +58,9 @@ export interface DeepSeekFail {
 
 export type DeepSeekCallResult = DeepSeekResult | DeepSeekFail;
 
-/** DeepSeek API 模型名映射 */
-export function getModelName(model: DeepSeekModel): string {
-  return model === 'pro'
-    ? config.DEEPSEEK_MODEL_PRO
-    : config.DEEPSEEK_MODEL_FLASH;
+/** DeepSeek API 模型名映射（只 flash，2026-09-10 起统一） */
+export function getModelName(_model?: DeepSeekModel): string {
+  return config.DEEPSEEK_MODEL_FLASH;
 }
 
 /**

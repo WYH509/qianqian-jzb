@@ -141,21 +141,6 @@ describe('executeAiParseTask — 闲时段 + 5 类兜底', () => {
     if (!r.ok) expect(r.kind).toBe('json_invalid');
   });
 
-  it('200 但内容非法 JSON → 兜底切 Pro 成功', async () => {
-    callDeepSeekMock
-      .mockResolvedValueOnce(okResult('not json'))
-      .mockResolvedValueOnce(okResult());
-    const r = await executeAiParseTask(input);
-    expect(r.ok).toBe(true);
-  });
-
-  it('200 但内容非法 JSON → 兜底也失败 → json_invalid', async () => {
-    callDeepSeekMock.mockResolvedValue(okResult('not json'));
-    const r = await executeAiParseTask(input);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.kind).toBe('json_invalid');
-  });
-
   it('```json 代码块包裹的内容也能解析成功', async () => {
     callDeepSeekMock.mockResolvedValue(
       okResult('```json\n[{"date":"2026-08-20","amount":5000}]\n```')

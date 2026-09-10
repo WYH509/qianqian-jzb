@@ -189,7 +189,7 @@ describe('ai_parse audit_log 覆盖', () => {
   it('ai-parse 成功 → action=ai_parse + model + tokens', async () => {
     executeAiParseTaskMock.mockResolvedValue({
       ok: true,
-      model: 'pro',
+      model: 'flash',
       usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
       data: [{ date: '2026-08-20', amount: 5000, type: 'income' }],
     });
@@ -201,7 +201,7 @@ describe('ai_parse audit_log 覆盖', () => {
     const row = lastAudit();
     expect(row?.action).toBe('ai_parse');
     expect(row?.entity_type).toBe('ai_call');
-    expect(row?.model).toBe('pro');
+    expect(row?.model).toBe('flash');
     expect(row?.error_category).toBeNull();
     const d = parseDetails(row!);
     expect(d.tokens_in).toBe(10);

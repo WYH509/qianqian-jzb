@@ -12,6 +12,7 @@ import {
   type DeepSeekRequest,
   type DeepSeekErrorKind,
 } from '../utils/deepseek-client.js';
+// 注：2026-09-10 起统一用 flash，Pro 路径全部下线。selectModel / processQueuedTasks 不再传 model 变体。
 import { isOffPeak } from '../utils/time-window.js';
 
 // --- 类型定义 ---
@@ -24,7 +25,7 @@ export interface AiParseTaskInput {
   systemPrompt?: string;
   /** 用户消息 */
   userPrompt?: string;
-  /** 强制模型 */
+  /** 强制模型（已废弃，2026-09-10 起统一 flash，保留字段向后兼容） */
   forceModel?: DeepSeekModel;
 }
 
@@ -45,24 +46,14 @@ export interface AiParseTaskError {
 
 export type AiParseTaskOutcome = AiParseTaskResult | AiParseTaskError;
 
-// --- 决策树（PRD §9.8.1） ---
+// --- 决策树（PRD §9.8.1，2026-09-10 简化为只 flash） ---
 /**
- * 根据任务特征选 Flash/Pro 模型
- * @returns 'flash' 或 'pro'
+ * 选模型（2026-09-10 起统一 flash，无 Pro 路径；forceModel 字段已废弃但保留兼容）
+ * @returns 'flash'
  */
-export function selectModel(input: AiParseTaskInput): DeepSeekModel {
-  if (input.forceModel) return input.forceModel;
-
-  // Step 1: 结构化数据解析（taskType=excel 或 userPrompt 含结构化解析关键词）→ Flash
-  if (input.taskType === 'excel') return 'flash';
-
-  // Step 2: 含图片/扫描件/OCR → Pro
-  if (input.fileType === 'image' || input.fileType === 'pdf') return 'pro';
-
-  // Step 3: 多步推理或复杂决策（默认银行流水解析为 Pro）→ Pro
-  if (input.taskType === 'bank_statement') return 'pro';
-
-  // Step 4: 默认 Flash
+export function selectModel(_input: AiParseTaskInput): DeepSeekModel {
+  // 历史 Pro 路由（image / pdf / bank_statement）全部并入 flash。
+  // forceModel 字段忽略（不再支持强制走 Pro）。
   return 'flash';
 }
 
@@ -157,25 +148,7 @@ export async function executeAiParseTask(
       };
     }
     if (result.error.kind === 'json_invalid') {
-      // JSON 无效：切 Pro 重试 1 次（§9.9.1）
-      if (model === 'flash') {
-        const retry = await callWithRetry(input, 'pro', 1);
-        if (retry.ok) {
-          // 从 Pro 响应里提取 JSON
-          const jsonResult = parseJsonFromResponse(
-            retry.response.choices[0]?.message.content ?? ''
-          );
-          if (jsonResult.ok) {
-            return {
-              ok: true,
-              data: jsonResult.data,
-              model: 'pro',
-              usage: retry.response.usage,
-            };
-          }
-        }
-      }
-      // 切 Pro 还失败 → 转人工
+      // JSON 无效：2026-09-10 起仅 flash，不升级 Pro，直接转人工
       return {
         ok: false,
         kind: 'json_invalid',
@@ -195,19 +168,7 @@ export async function executeAiParseTask(
   // 成功：解析 JSON 校验
   const jsonResult = parseJsonFromResponse(result.response.choices[0]?.message.content ?? '');
   if (!jsonResult.ok) {
-    // 200 但 JSON 无效 → JSON_INVALID 兜底
-    const fallback = await callWithRetry(input, model === 'flash' ? 'pro' : 'pro', 1);
-    if (fallback.ok) {
-      const json2 = parseJsonFromResponse(fallback.response.choices[0]?.message.content ?? '');
-      if (json2.ok) {
-        return {
-          ok: true,
-          data: json2.data,
-          model,
-          usage: fallback.response.usage,
-        };
-      }
-    }
+    // 200 但 JSON 无效 → JSON_INVALID（2026-09-10 起仅 flash，无 Pro 升级）
     return {
       ok: false,
       kind: 'json_invalid',
@@ -433,7 +394,7 @@ export async function processQueuedTasks(): Promise<{
     db.prepare(`UPDATE ai_parse_queue SET status = 'processing' WHERE id = ?`).run(t.id);
     try {
       const input = JSON.parse(t.task_data) as AiParseTaskInput;
-      const result = await executeAiParseTask({ ...input, forceModel: 'flash' });
+      const result = await executeAiParseTask(input);
 
       if (result.ok) {
         db.prepare(

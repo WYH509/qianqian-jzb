@@ -30,14 +30,13 @@ afterEach(() => {
 });
 
 const req = {
-  model: 'deepseek-v4-flash',
+  model: 'deepseek-flash',
   messages: [{ role: 'user' as const, content: 'hello' }],
 };
 
 describe('getModelName', () => {
-  it('flash / pro 映射', () => {
-    expect(getModelName('flash')).toBe('deepseek-v4-flash');
-    expect(getModelName('pro')).toBe('deepseek-v4-pro');
+  it('flash 映射（仅此一模型）', () => {
+    expect(getModelName()).toBe('deepseek-flash');
   });
 });
 

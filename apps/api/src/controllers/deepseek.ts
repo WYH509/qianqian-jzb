@@ -67,7 +67,6 @@ const testParseSchema = z.object({
   taskType: z.enum(['bank_statement', 'excel', 'ocr']),
   fileBase64: z.string().min(1),
   fileType: z.enum(['pdf', 'image', 'xlsx']),
-  forceModel: z.enum(['flash', 'pro']).optional(),
 });
 
 export async function testParse(
