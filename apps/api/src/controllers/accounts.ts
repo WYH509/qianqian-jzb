@@ -355,21 +355,21 @@ export async function deleteAccount(req: Request, res: Response, next: NextFunct
       throw new AppError(404, 'ERR0004', '账户不存在');
     }
 
-    // FR-ACC-004：仅当无任何交易记录时可删除（含软删除，与 FK RESTRICT 行为一致）
-    const txCount = (
-      db.prepare('SELECT COUNT(*) AS c FROM transactions WHERE account_id = ?').get(id) as { c: number }
-    ).c;
-    if (txCount > 0) {
-      throw new AppError(409, 'ERR2002', '账户有交易，禁止删除');
-    }
-
+    // 2026-09-12 大海拍板：owner 是 admin，单用户本地记账 → 允许硬删（级联删该账户下所有 transactions）。
+    // 注：V001__init.sql 的 import_history 表没有 account_id 列（只有 id/file_hash/file_name/row_count/status/error_message/created_at），
+    //     之前那行 `UPDATE import_history SET account_id = NULL` 是错代码，跑就 SQLITE_ERROR → 事务回滚 → 500。
+    //     2026-09-13 已删掉该错 UPDATE。import_history 不参与账户级联。
     const txn = db.transaction(() => {
+      const txDel = db.prepare('DELETE FROM transactions WHERE account_id = ?').run(id);
       db.prepare('DELETE FROM accounts WHERE id = ?').run(id);
-      writeAudit('delete', userId, id, { name: row.name });
+      writeAudit('delete', userId, id, {
+        name: row.name,
+        cascaded_transactions: txDel.changes,
+      });
     });
     txn();
 
-    logger.info({ accountId: id, name: row.name }, 'Account deleted');
+    logger.info({ accountId: id, name: row.name }, 'Account hard-deleted (admin cascade)');
     res.status(204).end();
   } catch (err) {
     if (
